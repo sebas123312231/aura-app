@@ -1,231 +1,163 @@
-# Aura
+# Aura — Kotlin Multiplatform Productivity App
 
-Aplicación de productividad (Todo + Hábitos + Dashboard + Pomodoro + Ajustes) construida con **Kotlin Multiplatform**, con soporte para Android
+[![Kotlin](https://img.shields.io/badge/Kotlin-multiplatform-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose-Multiplatform-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Android](https://img.shields.io/badge/Android-first-3DDC84?logo=android&logoColor=white)](https://developer.android.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-integrations-FFCA28?logo=firebase&logoColor=202124)](https://firebase.google.com/)
+[![Gradle](https://img.shields.io/badge/Gradle-build-02303A?logo=gradle&logoColor=white)](https://gradle.org/)
 
-> Documentación adicional en la carpeta [`docs/`](docs/) (guías técnicas detalladas).
+Aura is a Kotlin Multiplatform productivity application built with Compose Multiplatform and an Android-first Firebase architecture. It brings together authentication, onboarding, dashboard workflows, todos, habits, journaling, Pomodoro state, notifications, remote configuration, and experiment-aware product behavior.
 
-## Características y módulos
+> This repository is a portfolio fork of a collaborative project. It is maintained here to document the mobile architecture, project scope, and the areas I personally contributed to.
 
-### Implementadas
+The project demonstrates breadth beyond web development: shared Kotlin domain and presentation code, Android platform integration, Firebase authentication and data services, local preferences, background work, notification delivery, feature flags, and recovery of an application after reconnecting it to a separate Firebase environment.
 
-- **Autenticación** — Inicio de sesión con Google y sesión persistente. Abstraído para SDKs nativos de cada plataforma (Android/iOS).
-- **Home / Dashboard** — Inicio editorial con fecha contextual, tareas pendientes, progreso de hábitos y acceso rápido a Enfoque.
-- **Todo** — CRUD completo con soporte de fecha de vencimiento. Respaldado por **Cloud Firestore** para sincronización entre dispositivos.
-- **Hábitos** — Seguimiento estricto de hábitos con rachas (Hoy, Mañana, Esta semana). Respaldado por **Cloud Firestore** para sincronización entre dispositivos.
-- **Ajustes** — Selector de tema con 5 paletas (Morado, Verde, Rojo, Oscuro, Alto contraste) persistido con DataStore KMP.
-- **Notificaciones** — Programación de notificaciones locales para resúmenes diarios y recordatorios de fecha de vencimiento. Abstraído para multiplataforma.
-- **Feature Flags** — Toggles mediante Firebase Remote Config para visibilidad condicional de funciones (Todos, Hábitos, Notificaciones, Journal, Pomodoro, Premium).
-- **Navegación** — Shell adaptable con bottom navigation en teléfonos y navigation rail en pantallas anchas; rutas tipadas (Home, Todo, Hábitos, Ajustes, Journal, Pomodoro) usando `kotlinx-serialization`.
-- **Sistema de diseño** — Módulo propio `designsystem` con tokens de tema (`AppTheme.colors`, `AppTheme.typography`), tipografía Manrope local, marca orbital, `AuraButton`, `AuraTextField`, hojas modales, estados y 5 paletas de color.
-- **Onboarding** — Flujo inicial basado en JSON por idioma, localizado dinámicamente.
-- **Journal** — Entradas de diario con sincronización en Firestore.
-- **Pomodoro** — Temporizador de enfoque con tres modos (Pomodoro / Pausa corta / Pausa larga) y persistencia del estado.
-- **Experimentos A/B** — Infraestructura de experimentación (`Free` vs `Premium`), variantes de Home y frases de motivación.
+## About the Project
 
-## Stack tecnológico
+Aura follows a Kotlin Multiplatform structure with shared feature code and platform-specific implementations. The current product path is Android-first: Android contains the concrete Firebase, Credential Manager, WorkManager, notification, and Remote Config integrations used by the runnable experience, while iOS targets and source sets are present but not represented as a claim of feature-complete iOS parity.
 
-| Capa | Tecnología |
-|---|---|
-| **Framework** | Kotlin Multiplatform (Android + iOS) |
-| **UI** | Compose Multiplatform |
-| **Arquitectura** | Clean Architecture + MVVM/MVI |
-| **DI** | Koin 4.1.1 (módulos por feature) |
-| **Base de datos remota** | Cloud Firestore + Firebase Realtime Database |
-| **Autenticación** | Firebase Auth (Google Sign-In) |
-| **Navegación** | Navigation Compose + kotlinx-serialization |
-| **Fecha / hora** | kotlinx-datetime |
-| **Preferencias** | DataStore KMP |
-| **Feature Flags** | Firebase Remote Config |
-| **Notificaciones push** | Firebase Cloud Messaging + WorkManager |
-| **Internacionalización** | Compose `composeResources` + [Loco](https://localise.biz) |
-| **Tareas en segundo plano** | WorkManager (Android)|
-| **Testing** | kotlin-test + Turbine + Mockative |
+The repository includes common feature modules for authentication, home/dashboard, todos, habits, journal, Pomodoro, settings, onboarding, notifications, and experiments. Firebase-backed user data is scoped below `users/{userId}` in Firestore, while experiment events use Realtime Database. DataStore holds local preferences and workflow state; background work and notifications are handled through Android platform services.
 
-## Estructura del proyecto
+## Core Features
 
-```
-aura-app/
-├── composeApp/           # Módulo KMP: código compartido y específico por plataforma
-│   ├── src/
-│   │   ├── commonMain/   # Kotlin neutro de plataforma
-│   │   ├── commonTest/   # Tests unitarios
-│   │   ├── androidMain/  # Implementaciones Android
-│   │   └── iosMain/      # Implementaciones iOS
-│   └── build.gradle.kts
-├── designsystem/         # Módulo de sistema de diseño (colores, tipografía, componentes)
-├── iosApp/               # Host nativo iOS (Swift / Xcode)
-├── functions/            # Firebase Cloud Functions (TypeScript)
-├── docs/                 # Guías y especificaciones técnicas
-├── gradle/               # Catálogo de versiones
-└── README.md
-```
+### Authentication and onboarding
 
-### Features dentro de `composeApp/src/commonMain/`
+- Firebase Authentication with Google Sign-In.
+- Android Credential Manager flow using the generated OAuth web client ID.
+- Authorized-account selection with account-picker fallback and explicit error states.
+- Session-aware navigation, sign-in/sign-out state handling, and localized onboarding.
 
-Cada feature sigue Clean Architecture con sus capas `domain/`, `data/`, `presentation/` y `di/`:
+### Productivity workflows
 
-| Feature | Responsabilidad |
-|---|---|
-| `auth/` | Inicio de sesión con Google y sesión persistente |
-| `home/` | Dashboard con KPIs y motivación diaria |
-| `todo/` | Lista de tareas con CRUD y fecha de vencimiento |
-| `habit/` | Seguimiento de hábitos con rachas y grilla de 7 días |
-| `settings/` | Tema, preferencias de notificación y logout |
-| `notification/` | Programación de notificaciones locales |
-| `onboarding/` | Flujo inicial localizado por idioma |
-| `journal/` | Entradas de diario con sincronización en Firestore |
-| `pomodoro/` | Temporizador de enfoque con tres modos |
-| `experiments/` | A/B testing y plan de usuario (Free / Premium) |
-| `shared/` | Infraestructura transversal: feature flags, remote config, DataStore, utilidades de color |
+- Dashboard/home experience with user context and feature-gated sections.
+- Todo creation, editing, completion, due dates, and Firestore-backed reactive updates.
+- Habit creation, streak/completion tracking, and Firestore completion records.
+- Journal entries stored and observed through the signed-in user's Firestore subtree.
+- Pomodoro state and settings persisted through local DataStore-backed preferences.
 
-## Arquitectura
+### Notifications and background work
 
-El proyecto sigue **Clean Architecture** con modularidad por feature. Cada feature contiene sus propias capas `Domain`, `Data` y `Presentation`. La lógica compartida vive en `commonMain`, con código específico de plataforma limitado a declaraciones `expect`/`actual`.
+- Firebase Cloud Messaging integration and Android notification channels.
+- Runtime notification permission handling and notification-facing UI states.
+- WorkManager jobs for daily summaries, Pomodoro-related work, and experiment heartbeat behavior.
+- Local scheduling paths for application reminders and workflow notifications.
 
-Reglas clave:
-- **Sin imports de `java.*` en `commonMain`**.
-- **Fechas exclusivamente con `kotlinx-datetime`**.
-- Constructores específicos de plataforma (Room, DataStore, Firebase) mediante `expect`/`actual`.
-- **Toda la UI consume `AppTheme.colors` y `AppTheme.typography`** — sin colores ni tamaños de fuente hardcodeados.
-- **Sin strings hardcodeados** — todo texto visible al usuario se resuelve desde `strings.xml`.
+### Remote configuration and experiments
 
-Guías detalladas disponibles en `docs/`:
+- Firebase Remote Config defaults, fetch/activate, and real-time update listening.
+- Feature flags with a polling fallback when real-time updates are unavailable.
+- Free/Premium gates and experiment variants represented in shared application logic.
+- Realtime Database event logging under the authenticated user's experiment path.
 
-- [`docs/KMP_ARCHITECTURE.md`](docs/KMP_ARCHITECTURE.md) — modelo de compilación KMP, source sets, `expect`/`actual`
-- [`docs/KOIN_IN_KMP.md`](docs/KOIN_IN_KMP.md) — Inyección de dependencias
-- [`docs/NAVIGATION_IN_KMP.md`](docs/NAVIGATION_IN_KMP.md) — Routing con tipos seguros
-- [`docs/FIREBASE_IN_KMP.md`](docs/FIREBASE_IN_KMP.md) — Servicios de Firebase
-- [`docs/WORKMANAGER_IN_KMP.md`](docs/WORKMANAGER_IN_KMP.md) — Tareas en segundo plano
+### Product foundation
 
-## Desarrollo
+- Compose Multiplatform UI with shared design tokens, typography, components, and screen shells.
+- Navigation and dependency injection with Kotlin serialization and Koin.
+- Localization assets and translation workflow support.
+- Common tests plus Android instrumented and visual-fixture coverage for critical UI behavior.
 
-### Requisitos
+## Technical Architecture
 
-- **JDK 11** o superior
-- **Android SDK** con `compileSdk = 36`, `minSdk = 24`
-- **Node 20** (para Firebase Cloud Functions)
-- **`curl`** disponible en el PATH (lo usan los scripts de Loco)
+```text
+commonMain
+  shared models, repositories, use cases, ViewModels, navigation, UI
+       │ expect/actual boundaries
+       ▼
+androidMain
+  Firebase Auth/Firestore/RTDB/Remote Config/FCM
+  Credential Manager, WorkManager, notifications, DataStore
+       │
+       ├── Firestore: users/{uid}/todos, habits, completions, journals
+       └── RTDB: users/{uid}/experiments/events
 
-### Comandos de build y test
-
-#### Android
-
-```shell
-./gradlew :composeApp:assembleDebug           # Build debug
-./gradlew :composeApp:testDebugUnitTest       # Tests unitarios
-./gradlew :composeApp:connectedAndroidTest    # Tests instrumentados
+iosMain
+  platform target and source-set boundaries; selected integrations remain partial
 ```
 
-#### Limpieza
+The project separates shared feature logic from platform services through interfaces and Android implementations. Firebase initialization, Google credential exchange, Firestore listeners, Remote Config, FCM, WorkManager, and notification channels are wired in the Android source set. The repository's [KMP architecture notes](./docs/KMP_ARCHITECTURE.md) and [Firebase integration notes](./docs/FIREBASE_IN_KMP.md) document those boundaries.
 
-```shell
-./gradlew clean
-```
+Room and SQLite dependencies are present in the Gradle configuration, but the current checkout does not contain active Room entities, DAOs, or a Room database implementation for the product flows. The current user-data path is Firestore plus DataStore; this README does not present Room as an implemented persistence layer.
 
-## Testing
+## My Role & Contributions
 
-El módulo `composeApp` incluye una suite de tests unitarios JVM en `composeApp/src/commonTest`. La suite completa son **45 clases de test, 178 tests**.
+My contributions cover mobile UI and feature work, authentication and Firebase integration, experiment infrastructure, Android build configuration, and the later reconnection of the application to a separate Firebase environment.
 
-### Cómo correr los tests
+### Direct product and platform contributions
 
-```shell
-# Toda la suite
+- **Authentication:** implemented and strengthened the authentication state model, platform error handling, Google Sign-In integration, Credential Manager request flow, OAuth client wiring, authorized-account fallback, and sign-in transition behavior. The current `MainActivity` and auth state code preserve that work; see [`238f7dd`](https://github.com/sebas123312231/aura-app/commit/238f7dd) and the authentication work in [PR #12](https://github.com/Alee053/aura-app/pull/12).
+- **Remote Config and experiments:** contributed the Remote Config service, feature-flag handling, experiment models/repositories/use cases, A/B variant behavior, Free/Premium gates, RTDB experiment-event logging, and related heartbeat/notification paths. The integration direction is visible in [PR #12](https://github.com/Alee053/aura-app/pull/12) and the subsequent [PR #13](https://github.com/Alee053/aura-app/pull/13).
+- **Notifications:** implemented and debugged Android notification channels, permission handling, FCM-facing behavior, and notification-related UI states, including the platform edge cases represented by the current Android source.
+- **Application features:** contributed across onboarding/session navigation, dashboard/home, habits, todos, journal, Pomodoro, settings/theme behavior, localized strings, and the shared Compose design system. The current fork history contains the corresponding feature, UI, and interaction commits rather than only isolated configuration changes.
+- **Testing and build readiness:** added or extended common domain/ViewModel/mapper/manager tests, Android instrumented UI fixtures, operation-oriented UI checks, and the Gradle/build configuration needed to run Android debug and test tasks.
+
+The project was built collaboratively. The product feature list describes the application as a whole; the bullets above identify areas supported by my commits and the collaborative PR history, without claiming sole authorship of every screen or service.
+
+## Environment Reconstruction & Runtime Recovery
+
+The later infrastructure work was more involved than changing a Firebase URL. I decoupled the portfolio/demo checkout from its inherited Firebase attachment and reconstructed the configuration required for the application to operate against a separate project.
+
+That recovery work included:
+
+- Creating the repository-side Firebase project binding and aligning the Android application with the new `google-services.json` configuration and project metadata.
+- Restoring the checked-in Firestore rules and composite indexes for user-scoped todos, habits, completions, and journals.
+- Reconnecting Firebase Authentication and Google OAuth wiring, including the generated web client ID consumed by Credential Manager and the Android-side error/fallback paths.
+- Re-establishing the Remote Config, feature-flag, Firestore, Realtime Database, FCM, and notification integration points after the infrastructure change.
+- Updating and validating Gradle/build configuration so the Android target could be assembled and its test tasks could run against the reconstructed project setup.
+- Debugging broken or incomplete Credential Manager/Google authentication paths and restoring the session-dependent modules that rely on a valid signed-in user.
+
+The repository intentionally does not expose SHA-1/SHA-256 fingerprints, OAuth secrets, Firebase credentials, or hosted-service claims. SHA registration, authorized OAuth clients, Firebase Console state, and real-device verification remain external setup requirements. The reconstruction demonstrates infrastructure recovery and integration debugging; it is not a claim of production deployment.
+
+## Technical Highlights
+
+- **Shared/mobile boundary:** common Kotlin code owns feature behavior while Android actuals handle Firebase, credentials, background work, notifications, and platform permissions.
+- **User-scoped cloud data:** Firestore rules and repository paths keep application data below the authenticated user's document tree.
+- **Resilient sign-in flow:** Credential Manager requests, authorized-account selection, account-picker fallback, and explicit state/error handling are coordinated instead of relying on a single happy path.
+- **Runtime configuration:** Remote Config and feature-flag managers support defaults, fetch/activate, real-time updates, and a fallback polling path.
+- **Experiment instrumentation:** A/B decisions and experiment events have explicit models and RTDB persistence paths.
+- **Android operational behavior:** WorkManager, FCM, notification channels, permissions, and local state persistence are treated as product behavior rather than afterthoughts.
+
+## Tech Stack
+
+| Area | Technologies |
+| --- | --- |
+| Language and UI | Kotlin, Kotlin Multiplatform, Compose Multiplatform |
+| Android | Android SDK, Credential Manager, Google Identity Services, WorkManager, notification APIs |
+| Cloud services | Firebase Authentication, Firestore, Realtime Database, Remote Config, Cloud Messaging |
+| Local state | DataStore, in-memory/session state, platform scheduling |
+| Architecture | Shared feature layers, repository/use-case boundaries, ViewModels, Koin, Kotlin serialization |
+| Quality and tooling | Gradle, Kotlin tests, coroutines test utilities, Android instrumented UI tests, visual fixtures |
+
+## Local Setup
+
+The application requires Android tooling and an authorized Firebase project for real authentication and cloud-backed behavior. The checked-in Firebase configuration is project-specific; replace it with an authorized configuration when working in another environment and never commit secrets.
+
+### Requirements
+
+- JDK 17 or newer supported by the current Android Gradle Plugin line; this checkout was inspected with JDK 21.
+- Android SDK with API 36 installed. The app declares min SDK 24 and target/compile SDK 36.
+- Android Studio or an equivalent Android SDK/emulator setup.
+- The Gradle wrapper included in the repository (`gradle-9.4.1`).
+- A Firebase project with Google Authentication, Firestore, Remote Config, Realtime Database, and FCM enabled as needed by the flow being tested.
+
+### Build and test
+
+```bash
+./gradlew :composeApp:assembleDebug
 ./gradlew :composeApp:testDebugUnitTest
-
-# Una sola clase
-./gradlew :composeApp:testDebugUnitTest \
-    --tests "com.programovil.aura.pomodoro.presentation.PomodoroViewModelTest"
-
-# Un solo método de test
-./gradlew :composeApp:testDebugUnitTest \
-    --tests "com.programovil.aura.pomodoro.presentation.PomodoroViewModelTest.initial state is a 25-minute idle pomodoro"
-
-# Varias clases (wildcard)
-./gradlew :composeApp:testDebugUnitTest \
-    --tests "com.programovil.aura.todo.domain.usecase.*"
+./gradlew :composeApp:connectedAndroidTest
 ```
 
-Para corridas locales más rápidas, salta el pull de traducciones de Loco y el hook de `preBuild`:
+On Windows, use `gradlew.bat` instead of `./gradlew`. The Android tests and visual fixtures can exercise local UI behavior without representing a live OAuth or production Firebase validation. Real sign-in, Firestore, Remote Config, RTDB, FCM, and physical-device notification checks require the external Firebase project and its console-side configuration.
 
-```shell
-./gradlew :composeApp:testDebugUnitTest -x pullTranslations -x preBuild --offline
-```
+Translation synchronization is optional and requires the repository's `LOCO_API_KEY`; it is not required for the standard Android debug build. The optional `functions` directory also requires its own Node/Firebase CLI setup and authorized project configuration.
 
-Los reportes HTML quedan en `composeApp/build/reports/tests/testDebugUnitTest/`. Los resultados JUnit XML viven al lado, en `composeApp/build/test-results/testDebugUnitTest/`, y son aptos para que los consuma CI.
+## Current Status
 
-### Distribución de los tests
+Aura is an Android-first Kotlin Multiplatform portfolio project with an active shared codebase and substantial Firebase integration. The Android path is the primary runnable surface; the iOS target and selected platform integrations remain partial. This repository makes no claim of production deployment, production user volume, or complete cross-platform parity.
 
-| Capa | Clases de test | Tests |
-|---|---|---|
-| Presentation — ViewModels | 9 | 66 |
-| Domain — use cases | 20 | 50 |
-| Máquinas de estado puras / modelos | 5 | 32 |
-| Presentation — mappers | 4 | 18 |
-| Infraestructura compartida (`*Manager`) | 4 | 11 |
-| Contratos de repositorio (sólo Android) | 1 | 1 |
-| Helpers compartidos (`FakeRemoteConfigService`) | 2 | — |
-| **Total** | **45** | **178** |
+## Credits & Collaboration
 
-La suite cubre todos los use cases de dominio, todos los contratos de repositorio `@Mockable` (vía su use case), todos los ViewModel de presentation, todos los data mappers y los helpers de infraestructura compartida (`MotivationPhraseManager`, `UserPlanManager`, `RemoteConfigValueManager`, `FeatureFlagManager`, `ColorUtils`).
-
-### Convenciones
-
-- **Test doubles** — Las interfaces `@Mockable` se mockean con `mock(of<T>())`; todo lo demás usa fakes hechos a mano (p. ej. `FakeJournalRepository`, `FakeAuthService`, `InMemoryPreferenceDataStore`).
-- **Coroutines** — Los tests de ViewModel usan `StandardTestDispatcher` + `Dispatchers.setMain`; los use cases usan `runTest { ... }`. Un `@AfterTest` cancela cada `viewModelScope` creado para que los tickers colgados no bloqueen `runTest`.
-- **Flows** — El patrón estándar es `app.cash.turbine.test { awaitItem(); awaitComplete() }`.
-- **Naming** — `comportamiento bajo condición` entre comillas invertidas (p. ej. `` `successful dashboard emission clears loading and updates data` ``).
-
-### Cómo agregar un test nuevo
-
-1. Reflejá el layout de paquetes del código de producción (p. ej. fuente en `…/todo/domain/usecase/` → test en `…/todo/domain/usecase/`).
-2. Si la dependencia es `@Mockable`, usá `mock(of<T>())`. Si no, extendé la interfaz o escribí un fake chico.
-3. Registrá cualquier `ViewModel` creado en el test en una lista dentro de `@AfterTest` y llamá `viewModel.viewModelScope.cancel()` — si no, el test se cuelga en `runTest` esperando un ticker.
-
-## Localización (Loco)
-
-Las traducciones se gestionan en [Loco](https://localise.biz) y se sincronizan con el repositorio mediante dos tareas de Gradle. El proyecto tiene tres idiomas: **`en`** (fuente, commiteado en git), **`es`** y **`fr`**.
-
-Los archivos viven en `composeApp/src/commonMain/composeResources/`:
-
-- `values/strings.xml` — fuente en inglés
-- `values-es/strings.xml` — español (generado)
-- `values-fr/strings.xml` — francés (generado)
-
-### API key
-
-La variable `LOCO_API_KEY` se resuelve en este orden:
-
-1. Variable de entorno del shell
-2. Archivo `.env` en la raíz del repo
-3. `gradle.properties`
-
-Una clave de **Export** de sólo lectura alcanza para los `pull`; los `push` requieren una clave de **Full Access**. Conseguila en [Developer Tools → API Keys](https://localise.biz).
-
-### Tareas de Gradle
-
-Ambas viven bajo el grupo `localization` (visible con `./gradlew tasks --group localization`).
-
-| Tarea | Qué hace | Cuándo se ejecuta |
-|---|---|---|
-| `:composeApp:pullTranslations` | Descarga `es` y `fr` desde Loco y los escribe en `values-es/strings.xml` y `values-fr/strings.xml`. Usa `curl` con un archivo `.tmp` y sólo renombra si el contenido cambió. | **Automática**, está enganchada a `preBuild`, así que corre en cada `./gradlew assemble*`, test o sync del IDE. |
-| `:composeApp:pushTranslations` | Sube `values/strings.xml` a Loco como fuente `en`. Las claves nuevas se taggean con `new`; las actualizadas con `source-changed` para detectar drift en el dashboard. Las traducciones existentes de `es`/`fr` **nunca** se eliminan. | Manual, después de editar inglés. |
-
-```shell
-./gradlew :composeApp:pushTranslations   # subir inglés a Loco
-./gradlew assembleDebug                  # pull automático de es/fr y luego build
-```
-
-### Flujo de trabajo para agregar o cambiar un string
-
-1. Edita el texto en inglés en `composeApp/src/commonMain/composeResources/values/strings.xml`.
-2. Ejecuta `./gradlew :composeApp:pushTranslations` para subirlo a Loco.
-3. En el dashboard de Loco, traduce manualmente o activa la auto-traducción. Las claves nuevas y modificadas ya están pre-tageadas para filtrarlas fácilmente.
-4. Ejecuta `./gradlew assembleDebug` (o cualquier otro build) para bajar las últimas traducciones de `es`/`fr` al repo.
-
-### Restricciones importantes
-
-- **Los placeholders printf de Android** (`%1$s`, `%1$d`, `%2$s`, etc.) deben sobrevivir todas las idas y vueltas. Si usás la auto-traducción de Loco, configurá el system prompt de Gemini para que nunca altere ni reordene esos tokens.
-- **La fuente en inglés es la fuente de verdad en git**. Los archivos `es` y `fr` commiteados se sobrescriben en cada build, así que cualquier edición manual de esos archivos se perderá.
-- Las **claves en inglés faltantes** en el archivo fuente **no se eliminan** de Loco por `pushTranslations` — sólo agrega y actualiza. Esto protege las traducciones a mano de `es`/`fr` contra borrados accidentales.
-
+- Original collaborative repository: [`Alee053/aura-app`](https://github.com/Alee053/aura-app)
+- Portfolio fork: [`sebas123312231/aura-app`](https://github.com/sebas123312231/aura-app)
+- Selected evidence: [Firebase project reconnection](https://github.com/sebas123312231/aura-app/commit/6f1496c), [Firestore rules and indexes](https://github.com/sebas123312231/aura-app/commit/b9441e2), [Credential Manager/auth hardening](https://github.com/sebas123312231/aura-app/commit/238f7dd), [integration PR #12](https://github.com/Alee053/aura-app/pull/12), and [merged integration PR #13](https://github.com/Alee053/aura-app/pull/13).
 
